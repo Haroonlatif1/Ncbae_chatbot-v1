@@ -1,7 +1,8 @@
+# serializers.py
 from rest_framework import serializers
-from .models import Message
+from .models import UserFeedback
 
 class MessageSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Message
+        model = UserFeedback
         fields = '__all__'

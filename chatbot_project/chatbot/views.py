@@ -1,8 +1,65 @@
+
+from .models import UserFeedback
 import json
 from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
 from django.conf import settings
 from llamaapi import LlamaAPI
+from django.shortcuts import render
+
+# ... (rest of the code remains the same)
+from django.contrib.auth.models import User
+from django.views.decorators.csrf import csrf_exempt
+from rest_framework.response import Response
+from rest_framework.views import APIView
+from .serializers import MessageSerializer
+from .models import UserFeedback
+from rest_framework.response import Response
+from rest_framework.views import APIView
+from .serializers import MessageSerializer
+from .models import UserFeedback
+
+class CreateUserView(APIView):
+    def get(self, request):
+        serializer = MessageSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response({'message': 'User created successfully'})
+        return Response({'error': 'Invalid data'}, status=400)
+
+class GetUsersView(APIView):
+    def get(self, request):
+        users = UserFeedback.objects.all()
+        serializer = MessageSerializer(users, many=True)
+        return Response(serializer.data)
+
+def update_user(request, user_id):
+    if request.method == 'PUT':
+        try:
+            data = json.loads(request.body)
+            user = UserFeedback.objects.get(pk=user_id)
+            user.user_message = data.get('user_message', user.user_message)
+            user.bot_response = data.get('bot_response', user.bot_response)
+            user.save()
+            return JsonResponse({'message': 'User updated successfully'})
+        except UserFeedback.DoesNotExist:
+            return JsonResponse({'error': 'User does not exist'}, status=404)
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
+    else:
+        return JsonResponse({'error': 'PUT request required'}, status=400)
+
+def delete_user(request, user_id):
+    if request.method == 'DELETE':
+        try:
+            user = UserFeedback.objects.get(pk=user_id)
+            user.delete()
+            return JsonResponse({'message': 'User deleted successfully'})
+        except UserFeedback.DoesNotExist:
+            return JsonResponse({'error': 'User does not exist'}, status=404)
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
+    else:
+        return JsonResponse({'error': 'DELETE request required'}, status=400)
 
 llama = LlamaAPI(settings.LLAMA_API_KEY)
 
@@ -87,3 +144,26 @@ def handle_static_responses(prompt):
             return responses[category]
 
     return ""
+def create_user(request):
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            username = data.get('username')
+            email = data.get('email')
+
+            user = User.objects.create(username=username, email=email)
+            return JsonResponse({'message': 'User created successfully'})
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
+    else:
+        return JsonResponse({'error': 'POST request required'}, status=400)
+
+def get_users(request):
+    if request.method == 'GET':
+        try:
+            users = list(User.objects.values())  # Retrieve all users from database
+            return JsonResponse(users, safe=False)
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
+    else:
+        return JsonResponse({'error': 'GET request required'}, status=400)
